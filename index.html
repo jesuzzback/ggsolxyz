@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Site</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #080a0c;
+            overflow: hidden;
+        }
+        canvas {
+            border: 1px solid #fff;
+            display: none;
+            background-image: url('assets/background.png');
+            background-size: 800px 400px;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        @font-face {
+            font-family: '04b_30';
+            src: url('assets/04b_30.ttf') format('truetype');
+        }
+        #intro {
+            position: absolute;
+            text-align: center;
+            font-family: '04b_30', sans-serif;
+            color: #f0ff00;
+        }
+        #coming-soon {
+            font-size: 48px;
+            opacity: 1;
+            animation: fadeOut 3s forwards;
+        }
+        #play-game {
+            font-size: 32px;
+            opacity: 0;
+            animation: fadeInOut 4s forwards 3s;
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-family: '04b_30', sans-serif;
+            font-size: 24px;
+            color: #f0ff00;
+            display: none;
+        }
+        #win-message {
+            display: none;
+            position: absolute;
+            text-align: center;
+            font-family: '04b_30', sans-serif;
+            color: #f0ff00;
+            font-size: 32px;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+        #win-message.visible {
+            display: block;
+            opacity: 1;
+        }
+        #win-message span {
+            display: inline-block;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        #win-message a {
+            color: red;
+            text-decoration: none;
+        }
+        #win-message a:hover {
+            text-decoration: underline;
+        }
+        #nav-buttons {
+            display: none;
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+        #nav-buttons.visible {
+            display: flex;
+            opacity: 1;
+        }
+        .nav-button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #f0ff00;
+            color: #000;
+            border: none;
+            border-radius: 5px;
+            font-family: '04b_30', sans-serif;
+            cursor: not-allowed;
+            pointer-events: auto;
+        }
+        .nav-button:hover {
+            background-color: #808080;
+        }
+    </style>
+</head>
+<body>
+    <div id="intro">
+        <div id="coming-soon">Coming soon</div>
+        <div id="play-game">But for now, you can play our game</div>
+    </div>
+    <div id="score">Score: 0</div>
+    <div id="nav-buttons">
+        <button class="nav-button">Tokenomics</button>
+        <button class="nav-button">RoadMap</button>
+        <button class="nav-button">Buy</button>
+    </div>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <div id="win-message">
+        <span>Congratulations! You've passed the test and are worthy to join our <a href="https://t.me/ggsol_xyz" target="_blank">Telegram</a> community!</span>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const intro = document.getElementById('intro');
+        const scoreDisplay = document.getElementById('score');
+        const winMessage = document.getElementById('win-message');
+        const navButtons = document.getElementById('nav-buttons');
+
+        // Load coin sprite
+        const coinImage = new Image();
+        coinImage.src = 'assets/coin.png';
+
+        // Load character sprite
+        const characterImage = new Image();
+        characterImage.src = 'assets/character.png';
+
+        // Load obstacle sprite
+        const crashImage = new Image();
+        crashImage.src = 'assets/crash.png';
+
+        // Player parameters
+        const player = {
+            x: 50,
+            y: 300,
+            width: 50,
+            height: 50,
+            dy: 0,
+            gravity: 0.3,
+            jumpPower: -12,
+            isJumping: false
+        };
+
+        // Obstacles and coins
+        let obstacles = [];
+        let coins = [];
+        const obstacleWidth = 30;
+        const obstacleHeight = 50;
+        const coinWidth = 30;
+        const coinHeight = 30;
+        let obstacleFrequency = 150;
+        let coinFrequency = 200;
+        let frame = 0;
+        let score = 0;
+        let speed = 1;
+        const maxSpeed = 4;
+        const speedIncrease = 0.001;
+        let gameWon = false;
+
+        // Controls
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !player.isJumping) {
+                player.dy = player.jumpPower;
+                player.isJumping = true;
+            }
+        });
+
+        // Spawn obstacles
+        function spawnObstacle() {
+            obstacles.push({
+                x: canvas.width,
+                y: canvas.height - obstacleHeight,
+                width: obstacleWidth,
+                height: obstacleHeight
+            });
+        }
+
+        // Spawn coins
+        function spawnCoin() {
+            let coinY = Math.random() * 100 + 260;
+            let overlaps = obstacles.some(obstacle => 
+                Math.abs(obstacle.x - canvas.width) < 50 &&
+                coinY + coinHeight > canvas.height - obstacleHeight
+            );
+            if (!overlaps) {
+                coins.push({
+                    x: canvas.width,
+                    y: coinY,
+                    width: coinWidth,
+                    height: coinHeight
+                });
+            }
+        }
+
+        // Update game
+        function update() {
+            if (gameWon) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Increase speed gradually
+            if (speed < maxSpeed) {
+                speed += speedIncrease;
+            }
+
+            // Gravity and jump
+            player.dy += player.gravity;
+            player.y += player.dy;
+
+            if (player.y > canvas.height - player.height) {
+                player.y = canvas.height - player.height;
+                player.dy = 0;
+                player.isJumping = false;
+            }
+
+            // Draw player (using character sprite)
+            ctx.drawImage(characterImage, player.x, player.y, player.width, player.height);
+
+            // Obstacles
+            if (frame % obstacleFrequency === 0) {
+                spawnObstacle();
+            }
+
+            obstacles.forEach((obstacle, index) => {
+                obstacle.x -= speed;
+                // Draw obstacle sprite
+                ctx.drawImage(crashImage, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+
+                if (obstacle.x + obstacle.width < 0) {
+                    obstacles.splice(index, 1);
+                    score += 10;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    checkWinCondition();
+                }
+
+                // Collision with obstacle
+                if (
+                    player.x < obstacle.x + obstacle.width &&
+                    player.x + player.width > obstacle.x &&
+                    player.y < obstacle.y + obstacle.height &&
+                    player.y + player.height > obstacle.y
+                ) {
+                    alert(`Game Over! Your score: ${score}. Reload to play again.`);
+                    obstacles = [];
+                    coins = [];
+                    frame = 0;
+                    score = 0;
+                    speed = 1;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                }
+            });
+
+            // Coins
+            if (frame % coinFrequency === 0) {
+                spawnCoin();
+            }
+
+            coins.forEach((coin, index) => {
+                coin.x -= speed;
+                // Draw coin sprite
+                ctx.drawImage(coinImage, coin.x, coin.y, coin.width, coin.height);
+
+                // Collect coin
+                if (
+                    player.x < coin.x + coin.width &&
+                    player.x + player.width > coin.x &&
+                    player.y < coin.y + coin.height &&
+                    player.y + player.height > coin.y
+                ) {
+                    coins.splice(index, 1);
+                    score += 50;
+                    scoreDisplay.textContent = `Score: ${score}`;
+                    checkWinCondition();
+                }
+
+                if (coin.x + coin.width < 0) {
+                    coins.splice(index, 1);
+                }
+            });
+
+            frame++;
+            requestAnimationFrame(update);
+        }
+
+        // Check win condition
+        function checkWinCondition() {
+            if (score >= 500 && !gameWon) {
+                gameWon = true;
+                canvas.style.display = 'none';
+                scoreDisplay.style.display = 'none';
+                winMessage.classList.add('visible');
+                navButtons.classList.add('visible');
+            }
+        }
+
+        // Start game after intro
+        console.log('Starting intro...');
+        setTimeout(() => {
+            console.log('Intro finished, starting game...');
+            intro.style.display = 'none';
+            canvas.style.display = 'block';
+            scoreDisplay.style.display = 'block';
+            update();
+        }, 7000);
+    </script>
+</body>
+</html>
