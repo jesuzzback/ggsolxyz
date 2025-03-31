@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Game Site</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GG SOL</title>
     <style>
         body {
             margin: 0;
@@ -18,13 +18,17 @@
             border: 1px solid #fff;
             display: none;
             background-image: url('assets/background.png');
-            background-size: 800px 400px;
+            background-size: cover;
             background-repeat: no-repeat;
             background-position: center;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
         }
         @font-face {
             font-family: '04b_30';
-            src: url('assets/04b_30.ttf') format('truetype');
+            src: url('https://jesuzzback.github.io/ggsolxyz/assets/04b_30.ttf') format('truetype');
         }
         #intro {
             position: absolute;
@@ -33,12 +37,12 @@
             color: #f0ff00;
         }
         #coming-soon {
-            font-size: 48px;
+            font-size: clamp(24px, 6vw, 48px); /* Адаптивный размер шрифта */
             opacity: 1;
             animation: fadeOut 3s forwards;
         }
         #play-game {
-            font-size: 32px;
+            font-size: clamp(16px, 4vw, 32px);
             opacity: 0;
             animation: fadeInOut 4s forwards 3s;
         }
@@ -57,7 +61,7 @@
             top: 10px;
             left: 10px;
             font-family: '04b_30', sans-serif;
-            font-size: 24px;
+            font-size: clamp(12px, 3vw, 24px);
             color: #f0ff00;
             display: none;
         }
@@ -66,13 +70,14 @@
             position: absolute;
             text-align: center;
             font-family: '04b_30', sans-serif;
-            color: #f0ff00;
-            font-size: 32px;
+            font-size: clamp(16px, 4vw, 32px);
             background-color: rgba(0, 0, 0, 0.8);
             padding: 20px;
             border-radius: 10px;
             opacity: 0;
             transition: opacity 1s ease-in-out;
+            max-width: 90%;
+            box-sizing: border-box;
         }
         #win-message.visible {
             display: block;
@@ -101,17 +106,20 @@
             left: 50%;
             transform: translateX(-50%);
             display: flex;
-            gap: 20px;
+            gap: 10px;
             opacity: 0;
             transition: opacity 1s ease-in-out;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 90%;
         }
         #nav-buttons.visible {
             display: flex;
             opacity: 1;
         }
         .nav-button {
-            padding: 10px 20px;
-            font-size: 18px;
+            padding: 8px 16px;
+            font-size: clamp(12px, 2.5vw, 18px);
             background-color: #f0ff00;
             color: #000;
             border: none;
@@ -136,7 +144,7 @@
         <button class="nav-button">RoadMap</button>
         <button class="nav-button">Buy</button>
     </div>
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <canvas id="gameCanvas"></canvas>
     <div id="win-message">
         <span>Congratulations! You've passed the test and are worthy to join our <a href="https://t.me/ggsol_xyz" target="_blank">Telegram</a> community!</span>
     </div>
@@ -189,9 +197,41 @@
         const speedIncrease = 0.001;
         let gameWon = false;
 
-        // Controls
+        // Canvas dimensions
+        const baseWidth = 800;
+        const baseHeight = 400;
+        let scale = 1;
+
+        // Adjust canvas size based on screen
+        function resizeCanvas() {
+            const maxWidth = window.innerWidth;
+            const maxHeight = window.innerHeight;
+            scale = Math.min(maxWidth / baseWidth, maxHeight / baseHeight);
+            canvas.width = baseWidth * scale;
+            canvas.height = baseHeight * scale;
+            ctx.scale(scale, scale);
+        }
+
+        // Initial resize and listen for window resize
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Adjust player and object positions for scaling
+        player.x = 50;
+        player.y = baseHeight - player.height;
+
+        // Controls for keyboard
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space' && !player.isJumping) {
+                player.dy = player.jumpPower;
+                player.isJumping = true;
+            }
+        });
+
+        // Controls for touch (tap to jump)
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Предотвращаем прокрутку страницы
+            if (!player.isJumping) {
                 player.dy = player.jumpPower;
                 player.isJumping = true;
             }
@@ -200,8 +240,8 @@
         // Spawn obstacles
         function spawnObstacle() {
             obstacles.push({
-                x: canvas.width,
-                y: canvas.height - obstacleHeight,
+                x: baseWidth,
+                y: baseHeight - obstacleHeight,
                 width: obstacleWidth,
                 height: obstacleHeight
             });
@@ -209,14 +249,14 @@
 
         // Spawn coins
         function spawnCoin() {
-            let coinY = Math.random() * 100 + 260;
+            let coinY = Math.random() * 100 + (baseHeight - 140);
             let overlaps = obstacles.some(obstacle => 
-                Math.abs(obstacle.x - canvas.width) < 50 &&
-                coinY + coinHeight > canvas.height - obstacleHeight
+                Math.abs(obstacle.x - baseWidth) < 50 &&
+                coinY + coinHeight > baseHeight - obstacleHeight
             );
             if (!overlaps) {
                 coins.push({
-                    x: canvas.width,
+                    x: baseWidth,
                     y: coinY,
                     width: coinWidth,
                     height: coinHeight
@@ -228,7 +268,7 @@
         function update() {
             if (gameWon) return;
 
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.clearRect(0, 0, baseWidth, baseHeight);
 
             // Increase speed gradually
             if (speed < maxSpeed) {
@@ -239,8 +279,8 @@
             player.dy += player.gravity;
             player.y += player.dy;
 
-            if (player.y > canvas.height - player.height) {
-                player.y = canvas.height - player.height;
+            if (player.y > baseHeight - player.height) {
+                player.y = baseHeight - player.height;
                 player.dy = 0;
                 player.isJumping = false;
             }
