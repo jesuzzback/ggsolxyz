@@ -28,7 +28,7 @@
         }
         @font-face {
             font-family: '04b_30';
-            src: url('https://jesuzzback.github.io/ggsolxyz/assets/04b_30.ttf') format('truetype');
+            src: url('https://твой-username.github.io/my-game/assets/04b_30.ttf') format('truetype');
         }
         #intro {
             position: absolute;
@@ -37,7 +37,7 @@
             color: #f0ff00;
         }
         #coming-soon {
-            font-size: clamp(24px, 6vw, 48px); /* Адаптивный размер шрифта */
+            font-size: clamp(24px, 6vw, 48px);
             opacity: 1;
             animation: fadeOut 3s forwards;
         }
@@ -58,12 +58,13 @@
         }
         #score {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 2%;
+            left: 2%;
             font-family: '04b_30', sans-serif;
             font-size: clamp(12px, 3vw, 24px);
             color: #f0ff00;
             display: none;
+            z-index: 10; /* Убедимся, что текст поверх канваса */
         }
         #win-message {
             display: none;
@@ -206,15 +207,25 @@
         function resizeCanvas() {
             const maxWidth = window.innerWidth;
             const maxHeight = window.innerHeight;
-            scale = Math.min(maxWidth / baseWidth, maxHeight / baseHeight);
-            canvas.width = baseWidth * scale;
-            canvas.height = baseHeight * scale;
+            // Поддержка портретной и альбомной ориентации
+            if (maxWidth < maxHeight) {
+                // Портретная ориентация
+                scale = Math.min(maxWidth / baseWidth, maxHeight / baseHeight);
+                canvas.width = baseWidth * scale;
+                canvas.height = baseHeight * scale;
+            } else {
+                // Альбомная ориентация
+                scale = Math.min(maxWidth / baseWidth, maxHeight / baseHeight);
+                canvas.width = baseWidth * scale;
+                canvas.height = baseHeight * scale;
+            }
             ctx.scale(scale, scale);
         }
 
         // Initial resize and listen for window resize
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('orientationchange', resizeCanvas);
 
         // Adjust player and object positions for scaling
         player.x = 50;
@@ -230,7 +241,7 @@
 
         // Controls for touch (tap to jump)
         canvas.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // Предотвращаем прокрутку страницы
+            e.preventDefault();
             if (!player.isJumping) {
                 player.dy = player.jumpPower;
                 player.isJumping = true;
@@ -264,20 +275,30 @@
             }
         }
 
+        // Delta time for consistent speed across devices
+        let lastTime = 0;
+        const targetFPS = 60;
+        const targetDelta = 1000 / targetFPS;
+
         // Update game
-        function update() {
+        function update(timestamp) {
             if (gameWon) return;
+
+            // Calculate delta time
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+            const deltaScale = deltaTime / targetDelta;
 
             ctx.clearRect(0, 0, baseWidth, baseHeight);
 
             // Increase speed gradually
             if (speed < maxSpeed) {
-                speed += speedIncrease;
+                speed += speedIncrease * deltaScale;
             }
 
             // Gravity and jump
-            player.dy += player.gravity;
-            player.y += player.dy;
+            player.dy += player.gravity * deltaScale;
+            player.y += player.dy * deltaScale;
 
             if (player.y > baseHeight - player.height) {
                 player.y = baseHeight - player.height;
@@ -294,7 +315,7 @@
             }
 
             obstacles.forEach((obstacle, index) => {
-                obstacle.x -= speed;
+                obstacle.x -= speed * deltaScale;
                 // Draw obstacle sprite
                 ctx.drawImage(crashImage, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
 
@@ -328,7 +349,7 @@
             }
 
             coins.forEach((coin, index) => {
-                coin.x -= speed;
+                coin.x -= speed * deltaScale;
                 // Draw coin sprite
                 ctx.drawImage(coinImage, coin.x, coin.y, coin.width, coin.height);
 
@@ -372,7 +393,7 @@
             intro.style.display = 'none';
             canvas.style.display = 'block';
             scoreDisplay.style.display = 'block';
-            update();
+            requestAnimationFrame(update);
         }, 7000);
     </script>
 </body>
