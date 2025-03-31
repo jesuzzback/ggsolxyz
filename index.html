@@ -64,7 +64,7 @@
             font-size: clamp(12px, 3vw, 24px);
             color: #f0ff00;
             display: none;
-            z-index: 10; /* Убедимся, что текст поверх канваса */
+            z-index: 10;
         }
         #win-message {
             display: none;
@@ -72,6 +72,7 @@
             text-align: center;
             font-family: '04b_30', sans-serif;
             font-size: clamp(16px, 4vw, 32px);
+            color: #f0ff00; /* Жёлтый цвет для всего текста */
             background-color: rgba(0, 0, 0, 0.8);
             padding: 20px;
             border-radius: 10px;
@@ -86,6 +87,7 @@
         }
         #win-message span {
             display: inline-block;
+            color: #f0ff00; /* Жёлтый цвет для текста внутри span */
             animation: pulse 1.5s infinite;
         }
         @keyframes pulse {
@@ -94,7 +96,7 @@
             100% { transform: scale(1); }
         }
         #win-message a {
-            color: red;
+            color: red; /* Красный цвет для ссылки Telegram */
             text-decoration: none;
         }
         #win-message a:hover {
@@ -275,103 +277,110 @@
             }
         }
 
-        // Delta time for consistent speed across devices
+        // Fixed time step for consistent speed across devices
+        const fixedDeltaTime = 1000 / 60; // 60 FPS
         let lastTime = 0;
-        const targetFPS = 60;
-        const targetDelta = 1000 / targetFPS;
+        let accumulatedTime = 0;
 
         // Update game
         function update(timestamp) {
             if (gameWon) return;
 
-            // Calculate delta time
+            // Calculate time since last frame
+            if (!lastTime) lastTime = timestamp;
             const deltaTime = timestamp - lastTime;
             lastTime = timestamp;
-            const deltaScale = deltaTime / targetDelta;
+            accumulatedTime += deltaTime;
 
-            ctx.clearRect(0, 0, baseWidth, baseHeight);
+            // Update game logic in fixed time steps
+            while (accumulatedTime >= fixedDeltaTime) {
+                // Update game state
+                ctx.clearRect(0, 0, baseWidth, baseHeight);
 
-            // Increase speed gradually
-            if (speed < maxSpeed) {
-                speed += speedIncrease * deltaScale;
-            }
-
-            // Gravity and jump
-            player.dy += player.gravity * deltaScale;
-            player.y += player.dy * deltaScale;
-
-            if (player.y > baseHeight - player.height) {
-                player.y = baseHeight - player.height;
-                player.dy = 0;
-                player.isJumping = false;
-            }
-
-            // Draw player (using character sprite)
-            ctx.drawImage(characterImage, player.x, player.y, player.width, player.height);
-
-            // Obstacles
-            if (frame % obstacleFrequency === 0) {
-                spawnObstacle();
-            }
-
-            obstacles.forEach((obstacle, index) => {
-                obstacle.x -= speed * deltaScale;
-                // Draw obstacle sprite
-                ctx.drawImage(crashImage, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
-
-                if (obstacle.x + obstacle.width < 0) {
-                    obstacles.splice(index, 1);
-                    score += 10;
-                    scoreDisplay.textContent = `Score: ${score}`;
-                    checkWinCondition();
+                // Increase speed gradually
+                if (speed < maxSpeed) {
+                    speed += speedIncrease;
                 }
 
-                // Collision with obstacle
-                if (
-                    player.x < obstacle.x + obstacle.width &&
-                    player.x + player.width > obstacle.x &&
-                    player.y < obstacle.y + obstacle.height &&
-                    player.y + player.height > obstacle.y
-                ) {
-                    alert(`Game Over! Your score: ${score}. Reload to play again.`);
-                    obstacles = [];
-                    coins = [];
-                    frame = 0;
-                    score = 0;
-                    speed = 1;
-                    scoreDisplay.textContent = `Score: ${score}`;
-                }
-            });
+                // Gravity and jump
+                player.dy += player.gravity;
+                player.y += player.dy;
 
-            // Coins
-            if (frame % coinFrequency === 0) {
-                spawnCoin();
+                if (player.y > baseHeight - player.height) {
+                    player.y = baseHeight - player.height;
+                    player.dy = 0;
+                    player.isJumping = false;
+                }
+
+                // Draw player (using character sprite)
+                ctx.drawImage(characterImage, player.x, player.y, player.width, player.height);
+
+                // Obstacles
+                if (frame % obstacleFrequency === 0) {
+                    spawnObstacle();
+                }
+
+                obstacles.forEach((obstacle, index) => {
+                    obstacle.x -= speed;
+                    // Draw obstacle sprite
+                    ctx.drawImage(crashImage, obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+
+                    if (obstacle.x + obstacle.width < 0) {
+                        obstacles.splice(index, 1);
+                        score += 10;
+                        scoreDisplay.textContent = `Score: ${score}`;
+                        checkWinCondition();
+                    }
+
+                    // Collision with obstacle
+                    if (
+                        player.x < obstacle.x + obstacle.width &&
+                        player.x + player.width > obstacle.x &&
+                        player.y < obstacle.y + obstacle.height &&
+                        player.y + player.height > obstacle.y
+                    ) {
+                        alert(`Game Over! Your score: ${score}. Reload to play again.`);
+                        obstacles = [];
+                        coins = [];
+                        frame = 0;
+                        score = 0;
+                        speed = 1;
+                        scoreDisplay.textContent = `Score: ${score}`;
+                    }
+                });
+
+                // Coins
+                if (frame % coinFrequency === 0) {
+                    spawnCoin();
+                }
+
+                coins.forEach((coin, index) => {
+                    coin.x -= speed;
+                    // Draw coin sprite
+                    ctx.drawImage(coinImage, coin.x, coin.y, coin.width, coin.height);
+
+                    // Collect coin
+                    if (
+                        player.x < coin.x + coin.width &&
+                        player.x + player.width > coin.x &&
+                        player.y < coin.y + coin.height &&
+                        player.y + player.height > coin.y
+                    ) {
+                        coins.splice(index, 1);
+                        score += 50;
+                        scoreDisplay.textContent = `Score: ${score}`;
+                        checkWinCondition();
+                    }
+
+                    if (coin.x + coin.width < 0) {
+                        coins.splice(index, 1);
+                    }
+                });
+
+                frame++;
+                accumulatedTime -= fixedDeltaTime;
             }
 
-            coins.forEach((coin, index) => {
-                coin.x -= speed * deltaScale;
-                // Draw coin sprite
-                ctx.drawImage(coinImage, coin.x, coin.y, coin.width, coin.height);
-
-                // Collect coin
-                if (
-                    player.x < coin.x + coin.width &&
-                    player.x + player.width > coin.x &&
-                    player.y < coin.y + coin.height &&
-                    player.y + player.height > coin.y
-                ) {
-                    coins.splice(index, 1);
-                    score += 50;
-                    scoreDisplay.textContent = `Score: ${score}`;
-                    checkWinCondition();
-                }
-
-                if (coin.x + coin.width < 0) {
-                    coins.splice(index, 1);
-                }
-            });
-
-            frame++;
             requestAnimationFrame(update);
         }
 
