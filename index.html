@@ -239,6 +239,7 @@
       };
 
       // Obstacles and coins
+      let particles = [];
       let obstacles = [];
       let coins = [];
       const obstacleWidth = 30;
@@ -347,6 +348,20 @@
       let lastTime = 0;
       let accumulatedTime = 0;
 
+      function createPixelEffect(x, y) {
+        for (let i = 0; i < 10; i++) {
+          particles.push({
+            x: x + coinWidth / 2,
+            y: y + coinHeight / 2,
+            dx: (Math.random() - 0.5) * 4,
+            dy: (Math.random() - 0.5) * 4,
+            size: Math.random() * 4 + 2,
+            life: 30,
+            color: "#f0ff00",
+          });
+        }
+      }
+
       // Update game
       function update(timestamp) {
         if (gameWon) return;
@@ -454,6 +469,7 @@
               coins.splice(index, 1);
               score += 50;
               scoreDisplay.textContent = `Score: ${score}`;
+              createPixelEffect(coin.x, coin.y);
               checkWinCondition();
             }
 
@@ -465,6 +481,19 @@
           frame++;
           accumulatedTime -= fixedDeltaTime;
         }
+
+        particles.forEach((p, index) => {
+          p.x += p.dx;
+          p.y += p.dy;
+          p.life--;
+
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x, p.y, p.size, p.size);
+
+          if (p.life <= 0) {
+            particles.splice(index, 1);
+          }
+        });
 
         requestAnimationFrame(update);
       }
