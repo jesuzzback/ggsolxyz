@@ -428,6 +428,40 @@
         }
       }
 
+      function createPixelEffect2(x, y) {
+        for (let i = 0; i < 20; i++) {
+          particles.push({
+            x: x,
+            y: y,
+            dx: (Math.random() - 0.5) * 4,
+            dy: Math.random() * -3 - 1,
+            size: Math.random() * 2 + 2,
+            life: 30 + Math.random() * 10,
+            color: "#888888",
+          });
+        }
+      }
+
+      function updateParticles() {
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.dx;
+          p.y += p.dy;
+          p.dy += 0.2;
+          p.life -= 1;
+          if (p.life <= 0) {
+            particles.splice(i, 1);
+          }
+        }
+      }
+
+      function drawParticles() {
+        for (const p of particles) {
+          ctx.fillStyle = p.color;
+          ctx.fillRect(p.x, p.y, p.size, p.size);
+        }
+      }
+
       function endGame() {
         canvas.style.display = "none";
         scoreDisplay.style.display = "none";
@@ -468,10 +502,14 @@
           player.dy += player.gravity;
           player.y += player.dy;
 
-          if (player.y > baseHeight - player.height) {
+          if (player.y >= baseHeight - player.height) {
+            if (player.isJumping) {
+              createPixelEffect2(player.x + player.width / 2, baseHeight - 2);
+            }
             player.y = baseHeight - player.height;
             player.dy = 0;
             player.isJumping = false;
+            player.rotation = 0;
           }
 
           if (player.isJumping) {
