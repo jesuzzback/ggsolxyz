@@ -22,8 +22,9 @@
         display: none;
         background-image: url("/assets/background1.png");
         background-size: cover;
-        background-repeat: no-repeat;
-        background-position: center;
+        background-repeat: repeat;
+        background-position: 0 0;
+        animation: scrollBackground 10s linear infinite;
         max-width: 800px;
         max-height: 400px;
         width: 100%;
@@ -40,6 +41,14 @@
       @font-face {
         font-family: "04b_30";
         src: url("/assets/04b_30.ttf") format("truetype");
+      }
+      @keyframes scrollBackground {
+        from {
+          background-position: 0 0;
+        }
+        to {
+          background-position: -876px 0;
+        }
       }
       #intro {
         position: absolute;
