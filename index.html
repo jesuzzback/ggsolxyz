@@ -140,6 +140,43 @@
       #win-message a:hover {
         text-decoration: underline;
       }
+
+      #lose-message {
+        display: none;
+        position: absolute;
+        text-align: center;
+        font-family: "04b_30", sans-serif;
+        font-size: clamp(16px, 4vw, 32px);
+        color: #f0ff00;
+        background-color: rgba(0, 0, 0, 0);
+        padding: 20px;
+        border-radius: 10px;
+        opacity: 0;
+        transition: opacity 1s ease-in-out;
+        max-width: 90%;
+        box-sizing: border-box;
+      }
+
+      #lose-message.visible {
+        display: block;
+        opacity: 1;
+      }
+
+      #restart-button {
+        margin-top: 20px;
+        padding: 8px 16px;
+        font-size: clamp(12px, 2.5vw, 18px);
+        background-color: #f0ff00;
+        color: #000;
+        border: none;
+        border-radius: 5px;
+        font-family: "04b_30", sans-serif;
+        cursor: pointer;
+      }
+      #restart-button:hover {
+        background-color: #808080;
+      }
+
       #nav-buttons {
         display: none;
         position: absolute;
@@ -193,6 +230,10 @@
         <a>"MMXV5"</a>
         for future events!</span
       >
+    </div>
+    <div id="lose-message">
+      <span>Game Over! Your score: <span id="final-score"></span></span><br />
+      <button id="restart-button">Start Again</button>
     </div>
 
     <script>
@@ -362,6 +403,20 @@
         }
       }
 
+      function endGame() {
+        canvas.style.display = "none";
+        scoreDisplay.style.display = "none";
+        const loseMessage = document.getElementById("lose-message");
+        const finalScore = document.getElementById("final-score");
+        loseMessage.classList.add("visible");
+        finalScore.textContent = score;
+
+        const restartBtn = document.getElementById("restart-button");
+        restartBtn.addEventListener("click", () => {
+          location.reload();
+        });
+      }
+
       // Update game
       function update(timestamp) {
         if (gameWon) return;
@@ -442,13 +497,12 @@
               player.y < obstacle.y + obstacle.height &&
               player.y + player.height > obstacle.y
             ) {
-              alert(`Game Over! Your score: ${score}. Reload to play again.`);
               obstacles = [];
               coins = [];
               frame = 0;
               score = 0;
               speed = 4;
-              scoreDisplay.textContent = `Score: ${score}`;
+              endGame();
             }
           });
 
