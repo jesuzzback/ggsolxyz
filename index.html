@@ -288,6 +288,9 @@
       let coinAnimationFrame = 0;
       let coinAnimationSpeed = 5;
 
+      let animationFrameId;
+      let gameOver = false;
+
       // Load obstacle sprite
       const crashImage = new Image();
       crashImage.src = "/assets/crash.png";
@@ -453,6 +456,37 @@
         }
       }
 
+      function restartGame() {
+        obstacles = [];
+        coins = [];
+        particles = [];
+        frame = 0;
+        score = 0;
+        speed = 4;
+        gameWon = false;
+        player.y = baseHeight - player.height;
+        player.dy = 0;
+        player.isJumping = false;
+        player.rotation = 0;
+
+        document
+          .getElementById("lose-message")
+          .classList.remove("visible", "glitch");
+        winMessage.classList.remove("visible");
+        navButtons.classList.remove("visible");
+
+        canvas.style.display = "block";
+        scoreDisplay.style.display = "block";
+        scoreDisplay.textContent = "Score: 0";
+
+        backgroundOffset = 0;
+
+        lastTime = 0;
+        accumulatedTime = 0;
+
+        requestAnimationFrame(update);
+      }
+
       function updateParticles() {
         for (let i = particles.length - 1; i >= 0; i--) {
           const p = particles[i];
@@ -474,17 +508,44 @@
       }
 
       function endGame() {
+        gameOver = true;
+        cancelAnimationFrame(animationFrameId);
+
         canvas.style.display = "none";
         scoreDisplay.style.display = "none";
         const loseMessage = document.getElementById("lose-message");
         const finalScore = document.getElementById("final-score");
         loseMessage.classList.add("visible", "glitch");
         finalScore.textContent = score;
+      }
 
-        const restartBtn = document.getElementById("restart-button");
-        restartBtn.addEventListener("click", () => {
-          location.reload();
-        });
+      function resetGame() {
+        obstacles = [];
+        coins = [];
+        particles = [];
+        frame = 0;
+        score = 0;
+        speed = 4;
+        player.y = baseHeight - player.height;
+        player.dy = 0;
+        player.isJumping = false;
+        player.rotation = 0;
+        player.rotationSpeed = 0;
+        backgroundOffset = 0;
+        gameWon = false;
+        gameOver = false;
+        lastTime = 0;
+        accumulatedTime = 0;
+
+        document
+          .getElementById("lose-message")
+          .classList.remove("visible", "glitch");
+
+        canvas.style.display = "block";
+        scoreDisplay.style.display = "block";
+        scoreDisplay.textContent = "Score: 0";
+
+        animationFrameId = requestAnimationFrame(update);
       }
 
       let backgroundOffset = 0;
@@ -637,7 +698,9 @@
           }
         });
 
-        requestAnimationFrame(update);
+        if (!gameOver) {
+          animationFrameId = requestAnimationFrame(update);
+        }
       }
 
       // Check win condition
@@ -650,6 +713,10 @@
           navButtons.classList.add("visible");
         }
       }
+
+      document
+        .getElementById("restart-button")
+        .addEventListener("click", resetGame);
 
       // Start game after intro
       console.log("Starting intro...");
